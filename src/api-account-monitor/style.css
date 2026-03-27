@@ -1,0 +1,485 @@
+/* ============================================
+   SOMEWHILE Design Language System
+   API 账号余额监控大屏
+   ============================================ */
+
+/* ============================================
+   1. CSS 变量定义
+   ============================================ */
+:root {
+  /* 背景层级 */
+  --bg: #000000;          /* 页面最底层 */
+  --bg2: #1C1C1E;         /* 卡片、面板背景 */
+  --bg3: #2C2C2E;         /* 悬浮元素、下拉菜单 */
+  --bg4: #3A3A3C;         /* 激活/按下状态 */
+
+  /* 文本层级 */
+  --label: rgba(255,255,255,1.00);      /* 主文本 */
+  --label2: rgba(255,255,255,0.60);     /* 次要文本 */
+  --label3: rgba(255,255,255,0.30);     /* 辅助文本 */
+  --label4: rgba(255,255,255,0.18);     /* 最弱文本 */
+
+  /* 功能色 */
+  --blue: #0A84FF;        /* 主操作 */
+  --green: #30D158;       /* 完成/健康 */
+  --orange: #FF9F0A;      /* 进行中/警告 */
+  --red: #FF453A;         /* 错误/删除 */
+  --amber: #FFD60A;       /* 品牌强调 */
+  --purple: #BF5AF2;      /* 场景标签 */
+  --teal: #64D2FF;        /* 系统信息 */
+
+  /* 字体栈 */
+  --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Noto Sans SC', sans-serif;
+  --mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+
+  /* 动画曲线 */
+  --sq: cubic-bezier(0.34, 1.56, 0.64, 1);    /* spring-bounce */
+  --sg: cubic-bezier(0.22, 1, 0.36, 1);       /* spring-smooth */
+  --sp: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* ease-standard */
+
+  /* 布局 */
+  --header-height: 48px;
+  --footer-height: 32px;
+  --max-width: 1440px;
+  --spacing: 24px;
+}
+
+/* ============================================
+   2. 全局样式
+   ============================================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--label);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   3. Header（毛玻璃效果）
+   ============================================ */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-height);
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0, 0.8);
+  backdrop-filter: blur(40px) saturate(220%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%);
+  border-bottom: 1px solid rgba(255,255,255, 0.08);
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--label);
+  letter-spacing: -0.01em;
+}
+
+/* ============================================
+   4. Controls 控制区
+   ============================================ */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.control-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-item label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--label3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Select 下拉框 */
+.control-item select {
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255, 0.1);
+  background: var(--bg);
+  color: var(--label);
+  cursor: pointer;
+  transition: border-color 0.15s var(--sp);
+  appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23ffffff' stroke-opacity='0.3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.control-item select:hover {
+  border-color: rgba(255,255,255, 0.2);
+}
+
+.control-item select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* 按钮 */
+.control-item button {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s var(--sq);
+}
+
+/* 主按钮 */
+.control-item button.primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.control-item button.primary:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+}
+
+.control-item button.primary:active {
+  transform: scale(0.98);
+}
+
+/* 危险按钮 */
+.control-item button.danger {
+  background: var(--red);
+  color: #fff;
+}
+
+.control-item button.danger:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+}
+
+/* 状态文本 */
+.status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--label3);
+  padding: 4px 12px;
+  border-radius: 6px;
+  background: rgba(255,255,255, 0.02);
+}
+
+.status.loading {
+  color: var(--orange);
+  background: rgba(255,159,10, 0.06);
+}
+
+/* ============================================
+   5. Container 主容器
+   ============================================ */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--spacing);
+}
+
+/* ============================================
+   6. Stats 统计卡片区
+   ============================================ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+/* 统计卡片 */
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255, 0.06);
+  border-radius: 16px;
+  padding: 16px 18px;
+  transition: border-color 0.15s var(--sp);
+}
+
+.stat-card:hover {
+  border-color: rgba(255,255,255, 0.12);
+}
+
+.stat-card h3 {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--label4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+.stat-card .value {
+  font-family: var(--sans);
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--label);
+  letter-spacing: -0.02em;
+}
+
+/* ============================================
+   7. Cards Container 账号卡片区
+   ============================================ */
+.cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+/* 账号卡片 */
+.account-card {
+  background: var(--bg2);
+  border: 1px solid rgba(255,255,255, 0.06);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.15s var(--sp);
+}
+
+.account-card:hover {
+  border-color: rgba(255,255,255, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0, 0.4);
+}
+
+/* 卡片头部 */
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(255,255,255, 0.04);
+}
+
+.card-header .site-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label);
+  margin-bottom: 4px;
+}
+
+.card-header .account-name {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--label3);
+}
+
+/* 卡片主体 */
+.card-body {
+  padding: 16px 18px;
+}
+
+/* ============================================
+   8. Balance Info 余额信息
+   ============================================ */
+.balance-info {
+  margin-bottom: 12px;
+}
+
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.balance-row:last-child {
+  margin-bottom: 0;
+}
+
+.balance-row .label {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--label3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.balance-row .value {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label);
+}
+
+/* ============================================
+   9. Progress 进度条
+   ============================================ */
+.progress-container {
+  margin-top: 14px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--label3);
+}
+
+.progress-bar {
+  height: 6px;
+  background: rgba(255,255,255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px;
+  transition: width 0.22s var(--sg);
+}
+
+/* 进度条颜色状态 */
+.progress-fill.warning {
+  background: var(--orange);
+}
+
+.progress-fill.danger {
+  background: var(--red);
+}
+
+/* ============================================
+   10. Error Message 错误提示
+   ============================================ */
+.error-message {
+  padding: 12px 14px;
+  background: rgba(255,69,58, 0.06);
+  border: 1px solid rgba(255,69,58, 0.15);
+  border-radius: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--red);
+}
+
+/* ============================================
+   11. Last Update 最后更新时间
+   ============================================ */
+.last-update {
+  text-align: center;
+  margin-top: 24px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--label4);
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   12. Loading State 加载状态
+   ============================================ */
+.loading-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    color: var(--label);
+  }
+  50% {
+    opacity: 0.5;
+    color: var(--label3);
+  }
+}
+
+/* ============================================
+   13. 文本选中样式
+   ============================================ */
+::selection {
+  background: rgba(10,132,255, 0.3);
+}
+
+/* ============================================
+   14. 响应式适配
+   ============================================ */
+@media (max-width: 768px) {
+  .header {
+    padding: 0 16px;
+  }
+
+  .header h1 {
+    font-size: 14px;
+  }
+
+  .controls {
+    gap: 8px;
+  }
+
+  .control-item label {
+    display: none;
+  }
+
+  .container {
+    padding: 16px;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .stat-card .value {
+    font-size: 24px;
+  }
+
+  .cards-container {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .control-item select,
+  .control-item button {
+    padding: 8px 16px;
+    font-size: 11px;
+  }
+}
+
+/* ============================================
+   15. 滚动条样式
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255, 0.15);
+}

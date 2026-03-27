@@ -14,6 +14,7 @@ sync_rules_to_clinerules.py
 0_Backup/
 0_Reference/
 0_Backup/
+0_Doc/
 
 # 缓存文件夹
 .temp/
