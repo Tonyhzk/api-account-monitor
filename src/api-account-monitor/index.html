@@ -37,15 +37,15 @@
             </div>
             <div class="stat-card">
                 <h3>总余额</h3>
-                <div class="value">$<span id="totalBalance">0.00</span></div>
+                <div class="value">¥<span id="totalBalance">0.00</span></div>
             </div>
             <div class="stat-card">
                 <h3>总已用</h3>
-                <div class="value">$<span id="totalUsed">0.00</span></div>
+                <div class="value">¥<span id="totalUsed">0.00</span></div>
             </div>
             <div class="stat-card">
                 <h3>平均余额</h3>
-                <div class="value">$<span id="avgBalance">0.00</span></div>
+                <div class="value">¥<span id="avgBalance">0.00</span></div>
             </div>
         </div>
 
@@ -75,7 +75,7 @@
                     accountsConfig = result.data;
                     if (accountsConfig.refreshInterval !== undefined) {
                         const select = document.getElementById('intervalSelect');
-                        const option = select.querySelector(`option[value="${accountsConfig.refreshInterval}"]`);
+                        const option = select.querySelector(`option[value="¥{accountsConfig.refreshInterval}"]`);
                         if (option) {
                             select.value = accountsConfig.refreshInterval;
                         } else {
@@ -84,8 +84,8 @@
                             const mins = Math.floor(accountsConfig.refreshInterval / 60);
                             const secs = accountsConfig.refreshInterval % 60;
                             customOption.textContent = mins > 0
-                                ? (secs > 0 ? `${mins}分${secs}秒` : `${mins}分钟`)
-                                : `${secs}秒`;
+                                ? (secs > 0 ? `¥{mins}分¥{secs}秒` : `¥{mins}分钟`)
+                                : `¥{secs}秒`;
                             customOption.selected = true;
                             select.insertBefore(customOption, select.firstChild);
                         }
@@ -111,17 +111,17 @@
                 site.accounts.forEach((account, ai) => {
                     const card = document.createElement('div');
                     card.className = 'account-card';
-                    card.id = `card-${si}-${ai}`;
+                    card.id = `card-¥{si}-¥{ai}`;
                     card.innerHTML = `
                         <div class="card-header">
                             <div class="header-left">
-                                <div class="site-name">${site.name}</div>
+                                <div class="site-name">¥{site.name}</div>
                                 <div class="account-info">
-                                    <span class="account-name">${account.name}</span>
-                                    ${account.account ? '<span class="account-login">' + account.account + '</span>' : ''}
+                                    <span class="account-name">¥{account.name}</span>
+                                    ¥{account.account ? '<span class="account-login">' + account.account + '</span>' : ''}
                                 </div>
                             </div>
-                            <button class="refresh-btn" onclick="refreshSingleCard(${si},${ai})" title="刷新此账号">↻</button>
+                            <button class="refresh-btn" onclick="refreshSingleCard(¥{si},¥{ai})" title="刷新此账号">↻</button>
                         </div>
                         <div class="card-body">
                             <div class="balance-display loading-pulse">加载中...</div>
@@ -175,7 +175,7 @@
             for (const key in accountsData) {
                 const d = accountsData[key];
                 const [si, ai] = key.split('-').map(Number);
-                const card = document.getElementById(`card-${si}-${ai}`);
+                const card = document.getElementById(`card-¥{si}-¥{ai}`);
                 if (!card) continue;
 
                 if (d.success) {
@@ -185,20 +185,20 @@
 
                     card.querySelector('.card-body').innerHTML = `
                         <div class="balance-display">
-                            <span class="balance-amount">$${data.remaining.toFixed(2)}</span>
+                            <span class="balance-amount">¥¥{data.remaining.toFixed(2)}</span>
                         </div>
                         <div class="progress-container">
                             <div class="progress-bar">
-                                <div class="progress-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
+                                <div class="progress-fill ¥{colorClass}" style="width: ¥{Math.min(pct, 100)}%"></div>
                             </div>
-                            <span class="progress-pct">${pct.toFixed(1)}%</span>
+                            <span class="progress-pct">¥{pct.toFixed(1)}%</span>
                         </div>
                     `;
                     card.dataset.balance = data.remaining;
                     card.dataset.used = data.used;
                 } else {
                     card.querySelector('.card-body').innerHTML = `
-                        <div class="error-message">${d.message || '查询失败'}</div>
+                        <div class="error-message">¥{d.message || '查询失败'}</div>
                     `;
                     delete card.dataset.balance;
                     delete card.dataset.used;
@@ -216,14 +216,14 @@
                 const promises = [];
                 accountsConfig.sites.forEach((site, si) => {
                     site.accounts.forEach((account, ai) => {
-                        const promise = fetch(`api.php?action=query_balance&site=${si}&account=${ai}`)
+                        const promise = fetch(`api.php?action=query_balance&site=¥{si}&account=¥{ai}`)
                             .then(r => r.json())
                             .then(result => {
-                                accountsData[`${si}-${ai}`] = result;
+                                accountsData[`¥{si}-¥{ai}`] = result;
                             })
                             .catch(error => {
-                                console.error(`查询失败 [${site.name}/${account.name}]:`, error);
-                                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
+                                console.error(`查询失败 [¥{site.name}/¥{account.name}]:`, error);
+                                accountsData[`¥{si}-¥{ai}`] = { success: false, message: error.message };
                             });
                         promises.push(promise);
                     });
@@ -244,18 +244,18 @@
         }
 
         async function refreshSingleCard(si, ai) {
-            const card = document.getElementById(`card-${si}-${ai}`);
+            const card = document.getElementById(`card-¥{si}-¥{ai}`);
             const btn = card ? card.querySelector('.refresh-btn') : null;
             if (btn && btn.classList.contains('spinning')) return;
             if (btn) btn.classList.add('spinning');
 
             try {
-                const response = await fetch(`api.php?action=query_balance&site=${si}&account=${ai}`);
+                const response = await fetch(`api.php?action=query_balance&site=¥{si}&account=¥{ai}`);
                 const result = await response.json();
-                accountsData[`${si}-${ai}`] = result;
+                accountsData[`¥{si}-¥{ai}`] = result;
             } catch (error) {
                 console.error('查询失败:', error);
-                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
+                accountsData[`¥{si}-¥{ai}`] = { success: false, message: error.message };
             }
 
             renderAllCards();
