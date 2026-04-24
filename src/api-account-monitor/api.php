@@ -24,6 +24,7 @@ switch ($action) {
     case 'get_config':
         // 返回配置信息（不包含敏感信息，但包含账号ID用于后续查询）
         $publicConfig = [
+            'refreshInterval' => $config['refreshInterval'] ?? 300,
             'sites' => array_map(function($siteIndex, $site) {
                 return [
                     'name' => $site['name'],
