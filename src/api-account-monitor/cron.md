@@ -1,0 +1,1 @@
+docker exec php php /www/sites/apimonitor.houzhenkun.com/index/monitor.php
