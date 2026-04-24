@@ -58,7 +58,16 @@ switch ($action) {
         $site = $config['sites'][$siteIndex];
         $account = $site['accounts'][$accountIndex];
 
+        $rate = floatval($site['rate'] ?? 1);
         $result = queryBalance($site['baseUrl'], $account['userId'], $account['accessToken'], $site['headerKey']);
+
+        if ($result['success'] && $rate != 1) {
+            $result['data']['remaining'] *= $rate;
+            $result['data']['used'] *= $rate;
+            $result['data']['total'] *= $rate;
+            $result['data']['unit'] = 'CNY';
+        }
+
         echo json_encode($result);
         break;
 
@@ -67,8 +76,17 @@ switch ($action) {
         $results = [];
 
         foreach ($config['sites'] as $siteIndex => $site) {
+            $rate = floatval($site['rate'] ?? 1);
             foreach ($site['accounts'] as $accountIndex => $account) {
                 $result = queryBalance($site['baseUrl'], $account['userId'], $account['accessToken'], $site['headerKey']);
+
+                if ($result['success'] && $rate != 1) {
+                    $result['data']['remaining'] *= $rate;
+                    $result['data']['used'] *= $rate;
+                    $result['data']['total'] *= $rate;
+                    $result['data']['unit'] = 'CNY';
+                }
+
                 $results[] = [
                     'siteName' => $site['name'],
                     'accountName' => $account['name'],
