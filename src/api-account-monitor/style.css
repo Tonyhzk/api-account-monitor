@@ -7,39 +7,27 @@
    1. CSS 变量定义
    ============================================ */
 :root {
-  /* 背景层级 */
-  --bg: #000000;          /* 页面最底层 */
-  --bg2: #1C1C1E;         /* 卡片、面板背景 */
-  --bg3: #2C2C2E;         /* 悬浮元素、下拉菜单 */
-  --bg4: #3A3A3C;         /* 激活/按下状态 */
-
-  /* 文本层级 */
-  --label: rgba(255,255,255,1.00);      /* 主文本 */
-  --label2: rgba(255,255,255,0.60);     /* 次要文本 */
-  --label3: rgba(255,255,255,0.30);     /* 辅助文本 */
-  --label4: rgba(255,255,255,0.18);     /* 最弱文本 */
-
-  /* 功能色 */
-  --blue: #0A84FF;        /* 主操作 */
-  --green: #30D158;       /* 完成/健康 */
-  --orange: #FF9F0A;      /* 进行中/警告 */
-  --red: #FF453A;         /* 错误/删除 */
-  --amber: #FFD60A;       /* 品牌强调 */
-  --purple: #BF5AF2;      /* 场景标签 */
-  --teal: #64D2FF;        /* 系统信息 */
-
-  /* 字体栈 */
+  --bg: #000000;
+  --bg2: #1C1C1E;
+  --bg3: #2C2C2E;
+  --bg4: #3A3A3C;
+  --label: rgba(255,255,255,1.00);
+  --label2: rgba(255,255,255,0.60);
+  --label3: rgba(255,255,255,0.30);
+  --label4: rgba(255,255,255,0.18);
+  --blue: #0A84FF;
+  --green: #30D158;
+  --orange: #FF9F0A;
+  --red: #FF453A;
+  --amber: #FFD60A;
+  --purple: #BF5AF2;
+  --teal: #64D2FF;
   --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Noto Sans SC', sans-serif;
   --mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-
-  /* 动画曲线 */
-  --sq: cubic-bezier(0.34, 1.56, 0.64, 1);    /* spring-bounce */
-  --sg: cubic-bezier(0.22, 1, 0.36, 1);       /* spring-smooth */
-  --sp: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* ease-standard */
-
-  /* 布局 */
+  --sq: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --sg: cubic-bezier(0.22, 1, 0.36, 1);
+  --sp: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --header-height: 48px;
-  --footer-height: 32px;
   --max-width: 1440px;
   --spacing: 24px;
 }
@@ -64,7 +52,7 @@ body {
 }
 
 /* ============================================
-   3. Header（毛玻璃效果）
+   3. Header
    ============================================ */
 .header {
   position: sticky;
@@ -111,7 +99,6 @@ body {
   letter-spacing: 0.05em;
 }
 
-/* Select 下拉框 */
 .control-item select {
   font-family: var(--mono);
   font-size: 11px;
@@ -138,7 +125,6 @@ body {
   border-color: var(--blue);
 }
 
-/* 按钮 */
 .control-item button {
   font-family: var(--sans);
   font-size: 12px;
@@ -150,7 +136,6 @@ body {
   transition: all 0.15s var(--sq);
 }
 
-/* 主按钮 */
 .control-item button.primary {
   background: var(--blue);
   color: #fff;
@@ -165,18 +150,6 @@ body {
   transform: scale(0.98);
 }
 
-/* 危险按钮 */
-.control-item button.danger {
-  background: var(--red);
-  color: #fff;
-}
-
-.control-item button.danger:hover {
-  filter: brightness(1.1);
-  transform: scale(1.02);
-}
-
-/* 状态文本 */
 .status {
   font-family: var(--mono);
   font-size: 11px;
@@ -205,12 +178,11 @@ body {
    ============================================ */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
 
-/* 统计卡片 */
 .stat-card {
   background: var(--bg2);
   border: 1px solid rgba(255,255,255, 0.06);
@@ -246,114 +218,163 @@ body {
    ============================================ */
 .cards-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 12px;
 }
 
-/* 账号卡片 */
+/* ============================================
+   8. Account Card 账号卡片
+   ============================================ */
 .account-card {
   background: var(--bg2);
   border: 1px solid rgba(255,255,255, 0.06);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
   transition: all 0.15s var(--sp);
 }
 
 .account-card:hover {
   border-color: rgba(255,255,255, 0.12);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,0,0, 0.3);
 }
 
 /* 卡片头部 */
 .card-header {
-  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 14px 10px;
   border-bottom: 1px solid rgba(255,255,255, 0.04);
 }
 
-.card-header .site-name {
+.header-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.site-name {
   font-size: 13px;
   font-weight: 600;
   color: var(--label);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.card-header .account-name {
+.account-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-family: var(--mono);
   font-size: 11px;
+  min-width: 0;
+}
+
+.account-name {
   color: var(--label3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-login {
+  color: var(--label4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 刷新按钮 */
+.refresh-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255, 0.08);
+  background: transparent;
+  color: var(--label3);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s var(--sp);
+  flex-shrink: 0;
+  margin-left: 8px;
+  line-height: 1;
+}
+
+.refresh-btn:hover {
+  background: rgba(255,255,255, 0.06);
+  color: var(--label);
+  border-color: rgba(255,255,255, 0.15);
+}
+
+.refresh-btn:active {
+  transform: scale(0.92);
+}
+
+.refresh-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.refresh-btn.spinning {
+  animation: spin 0.8s linear infinite;
+  color: var(--blue);
+  border-color: rgba(10,132,255, 0.3);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 卡片主体 */
 .card-body {
-  padding: 16px 18px;
+  padding: 12px 14px 14px;
 }
 
 /* ============================================
-   8. Balance Info 余额信息
+   9. Balance 余额显示
    ============================================ */
-.balance-info {
-  margin-bottom: 12px;
+.balance-display {
+  margin-bottom: 10px;
 }
 
-.balance-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.balance-row:last-child {
-  margin-bottom: 0;
-}
-
-.balance-row .label {
+.balance-amount {
   font-family: var(--mono);
-  font-size: 11px;
-  color: var(--label3);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.balance-row .value {
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--label);
+  letter-spacing: -0.02em;
 }
 
 /* ============================================
-   9. Progress 进度条
+   10. Progress 进度条
    ============================================ */
 .progress-container {
-  margin-top: 14px;
-}
-
-.progress-label {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--label3);
+  align-items: center;
+  gap: 8px;
 }
 
 .progress-bar {
-  height: 6px;
+  flex: 1;
+  height: 4px;
   background: rgba(255,255,255, 0.06);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
   background: var(--green);
-  border-radius: 3px;
-  transition: width 0.22s var(--sg);
+  border-radius: 2px;
+  transition: width 0.3s var(--sg);
 }
 
-/* 进度条颜色状态 */
 .progress-fill.warning {
   background: var(--orange);
 }
@@ -362,11 +383,20 @@ body {
   background: var(--red);
 }
 
+.progress-pct {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--label3);
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: right;
+}
+
 /* ============================================
-   10. Error Message 错误提示
+   11. Error Message 错误提示
    ============================================ */
 .error-message {
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: rgba(255,69,58, 0.06);
   border: 1px solid rgba(255,69,58, 0.15);
   border-radius: 10px;
@@ -376,7 +406,7 @@ body {
 }
 
 /* ============================================
-   11. Last Update 最后更新时间
+   12. Last Update
    ============================================ */
 .last-update {
   text-align: center;
@@ -388,32 +418,26 @@ body {
 }
 
 /* ============================================
-   12. Loading State 加载状态
+   13. Loading State
    ============================================ */
 .loading-pulse {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    color: var(--label);
-  }
-  50% {
-    opacity: 0.5;
-    color: var(--label3);
-  }
+  0%, 100% { opacity: 1; color: var(--label); }
+  50% { opacity: 0.5; color: var(--label3); }
 }
 
 /* ============================================
-   13. 文本选中样式
+   14. 文本选中样式
    ============================================ */
 ::selection {
   background: rgba(10,132,255, 0.3);
 }
 
 /* ============================================
-   14. 响应式适配
+   15. 响应式适配
    ============================================ */
 @media (max-width: 768px) {
   .header {
@@ -446,13 +470,17 @@ body {
   }
 
   .cards-container {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
   }
 }
 
 @media (max-width: 480px) {
   .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .cards-container {
     grid-template-columns: 1fr;
   }
 
@@ -464,7 +492,7 @@ body {
 }
 
 /* ============================================
-   15. 滚动条样式
+   16. 滚动条样式
    ============================================ */
 ::-webkit-scrollbar {
   width: 8px;

@@ -32,6 +32,7 @@ switch ($action) {
                     'accounts' => array_map(function($accountIndex, $account) use ($siteIndex) {
                         return [
                             'name' => $account['name'],
+                            'account' => $account['account'] ?? '',
                             'siteIndex' => $siteIndex,
                             'accountIndex' => $accountIndex
                         ];

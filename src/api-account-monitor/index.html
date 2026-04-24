@@ -49,9 +49,7 @@
             </div>
         </div>
 
-        <div class="cards-container" id="cardsContainer">
-            <!-- 账号卡片将动态加载 -->
-        </div>
+        <div class="cards-container" id="cardsContainer"></div>
 
         <div class="last-update">
             最后更新: <span id="lastUpdate">-</span>
@@ -62,13 +60,12 @@
         let refreshInterval = null;
         let isLoading = false;
         let accountsConfig = null;
+        let accountsData = {};
 
-        // 页面加载时初始化
         document.addEventListener('DOMContentLoaded', function() {
             loadConfig();
         });
 
-        // 加载配置（账号列表）
         async function loadConfig() {
             try {
                 const response = await fetch('api.php?action=get_config');
@@ -82,7 +79,6 @@
                         if (option) {
                             select.value = accountsConfig.refreshInterval;
                         } else {
-                            // 配置值不在选项中，添加自定义选项
                             const customOption = document.createElement('option');
                             customOption.value = accountsConfig.refreshInterval;
                             const mins = Math.floor(accountsConfig.refreshInterval / 60);
@@ -94,9 +90,9 @@
                             select.insertBefore(customOption, select.firstChild);
                         }
                     }
-                    renderEmptyCards(); // 先渲染空卡片
-                    setupAutoRefresh(); // 配置加载后再设置自动刷新
-                    refreshData(); // 然后加载余额
+                    renderEmptyCards();
+                    setupAutoRefresh();
+                    refreshData();
                 } else {
                     updateStatus('加载配置失败: ' + result.message, false);
                 }
@@ -106,41 +102,39 @@
             }
         }
 
-        // 渲染空卡片（余额显示加载中）
         function renderEmptyCards() {
             if (!accountsConfig) return;
-
             const container = document.getElementById('cardsContainer');
             container.innerHTML = '';
 
-            accountsConfig.sites.forEach(site => {
-                site.accounts.forEach(account => {
+            accountsConfig.sites.forEach((site, si) => {
+                site.accounts.forEach((account, ai) => {
                     const card = document.createElement('div');
                     card.className = 'account-card';
-                    card.id = `card-${account.siteIndex}-${account.accountIndex}`;
-
+                    card.id = `card-${si}-${ai}`;
                     card.innerHTML = `
                         <div class="card-header">
-                            <div class="site-name">${site.name}</div>
-                            <div class="account-name">${account.name}</div>
+                            <div class="header-left">
+                                <div class="site-name">${site.name}</div>
+                                <div class="account-info">
+                                    <span class="account-name">${account.name}</span>
+                                    ${account.account ? '<span class="account-login">' + account.account + '</span>' : ''}
+                                </div>
+                            </div>
+                            <button class="refresh-btn" onclick="refreshSingleCard(${si},${ai})" title="刷新此账号">↻</button>
                         </div>
                         <div class="card-body">
-                            <div class="balance-info loading-pulse">
-                                正在加载余额...
-                            </div>
+                            <div class="balance-display loading-pulse">加载中...</div>
                         </div>
                     `;
-
                     container.appendChild(card);
                 });
             });
 
-            // 更新账号数量
             const totalAccounts = accountsConfig.sites.reduce((sum, site) => sum + site.accounts.length, 0);
             document.getElementById('totalAccounts').textContent = totalAccounts;
         }
 
-        // 设置自动刷新
         function setupAutoRefresh() {
             const select = document.getElementById('intervalSelect');
             select.addEventListener('change', function() {
@@ -151,14 +145,12 @@
                 }
             });
 
-            // 从配置中读取默认刷新间隔
             if (accountsConfig && accountsConfig.refreshInterval !== undefined) {
                 const seconds = accountsConfig.refreshInterval;
                 if (seconds > 0) {
                     refreshInterval = setInterval(refreshData, seconds * 1000);
                 }
             } else {
-                // 兜底：使用下拉框当前选中值
                 const defaultInterval = parseInt(select.value);
                 if (defaultInterval > 0) {
                     refreshInterval = setInterval(refreshData, defaultInterval * 1000);
@@ -166,38 +158,79 @@
             }
         }
 
-        // 刷新数据（只更新余额）
+        function getReferenceMax() {
+            let maxBalance = 0;
+            for (const key in accountsData) {
+                const d = accountsData[key];
+                if (d && d.success) {
+                    maxBalance = Math.max(maxBalance, d.data.remaining);
+                }
+            }
+            return maxBalance >= 100 ? maxBalance : 100;
+        }
+
+        function renderAllCards() {
+            const refMax = getReferenceMax();
+
+            for (const key in accountsData) {
+                const d = accountsData[key];
+                const [si, ai] = key.split('-').map(Number);
+                const card = document.getElementById(`card-${si}-${ai}`);
+                if (!card) continue;
+
+                if (d.success) {
+                    const data = d.data;
+                    const pct = (data.remaining / refMax) * 100;
+                    const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
+
+                    card.querySelector('.card-body').innerHTML = `
+                        <div class="balance-display">
+                            <span class="balance-amount">$${data.remaining.toFixed(2)}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
+                            </div>
+                            <span class="progress-pct">${pct.toFixed(1)}%</span>
+                        </div>
+                    `;
+                    card.dataset.balance = data.remaining;
+                    card.dataset.used = data.used;
+                } else {
+                    card.querySelector('.card-body').innerHTML = `
+                        <div class="error-message">${d.message || '查询失败'}</div>
+                    `;
+                    delete card.dataset.balance;
+                    delete card.dataset.used;
+                }
+            }
+        }
+
         async function refreshData() {
             if (isLoading || !accountsConfig) return;
             isLoading = true;
-
-            updateStatus('正在更新余额...', true);
+            updateStatus('正在更新...', true);
+            document.querySelectorAll('.refresh-btn').forEach(btn => btn.disabled = true);
 
             try {
-                // 并发请求所有账号余额
                 const promises = [];
-
-                accountsConfig.sites.forEach(site => {
-                    site.accounts.forEach(account => {
-                        const promise = fetch(`api.php?action=query_balance&site=${account.siteIndex}&account=${account.accountIndex}`)
-                            .then(response => response.json())
+                accountsConfig.sites.forEach((site, si) => {
+                    site.accounts.forEach((account, ai) => {
+                        const promise = fetch(`api.php?action=query_balance&site=${si}&account=${ai}`)
+                            .then(r => r.json())
                             .then(result => {
-                                updateCard(account.siteIndex, account.accountIndex, site.name, account.name, result);
+                                accountsData[`${si}-${ai}`] = result;
                             })
                             .catch(error => {
                                 console.error(`查询失败 [${site.name}/${account.name}]:`, error);
-                                updateCard(account.siteIndex, account.accountIndex, site.name, account.name, {
-                                    success: false,
-                                    message: error.message
-                                });
+                                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
                             });
-
                         promises.push(promise);
                     });
                 });
 
                 await Promise.all(promises);
-
+                renderAllCards();
                 updateStats();
                 updateLastUpdate();
                 updateStatus('更新成功');
@@ -206,114 +239,58 @@
                 updateStatus('刷新失败: ' + error.message, false);
             } finally {
                 isLoading = false;
+                document.querySelectorAll('.refresh-btn').forEach(btn => btn.disabled = false);
             }
         }
 
-        // 更新单个卡片
-        function updateCard(siteIndex, accountIndex, siteName, accountName, result) {
-            const card = document.getElementById(`card-${siteIndex}-${accountIndex}`);
-            if (!card) return;
+        async function refreshSingleCard(si, ai) {
+            const card = document.getElementById(`card-${si}-${ai}`);
+            const btn = card ? card.querySelector('.refresh-btn') : null;
+            if (btn && btn.classList.contains('spinning')) return;
+            if (btn) btn.classList.add('spinning');
 
-            if (result.success) {
-                const data = result.data;
-                const percentage = (data.remaining / data.total) * 100;
-                const progressClass = percentage > 50 ? '' : percentage > 20 ? 'warning' : 'danger';
-
-                card.innerHTML = `
-                    <div class="card-header">
-                        <div class="site-name">${siteName}</div>
-                        <div class="account-name">${accountName}</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="balance-info">
-                            <div class="balance-row">
-                                <span class="label">套餐</span>
-                                <span class="value">${data.planName}</span>
-                            </div>
-                            <div class="balance-row">
-                                <span class="label">剩余额度</span>
-                                <span class="value">$${data.remaining.toFixed(2)}</span>
-                            </div>
-                            <div class="balance-row">
-                                <span class="label">已用额度</span>
-                                <span class="value">$${data.used.toFixed(2)}</span>
-                            </div>
-                            <div class="balance-row">
-                                <span class="label">总额度</span>
-                                <span class="value">$${data.total.toFixed(2)}</span>
-                            </div>
-                        </div>
-                        <div class="progress-container">
-                            <div class="progress-label">
-                                <span>剩余 ${percentage.toFixed(1)}%</span>
-                                <span>已用 ${(100 - percentage).toFixed(1)}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill ${progressClass}" style="width: ${percentage}%"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // 保存数据用于统计
-                card.dataset.balance = data.remaining;
-                card.dataset.used = data.used;
-            } else {
-                card.innerHTML = `
-                    <div class="card-header">
-                        <div class="site-name">${siteName}</div>
-                        <div class="account-name">${accountName}</div>
-                    </div>
-                    <div class="card-body">
-                        <div class="error-message">
-                            查询失败: ${result.message}
-                        </div>
-                    </div>
-                `;
+            try {
+                const response = await fetch(`api.php?action=query_balance&site=${si}&account=${ai}`);
+                const result = await response.json();
+                accountsData[`${si}-${ai}`] = result;
+            } catch (error) {
+                console.error('查询失败:', error);
+                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
             }
+
+            renderAllCards();
+            updateStats();
+            updateLastUpdate();
+            if (btn) btn.classList.remove('spinning');
         }
 
-        // 更新统计数据
         function updateStats() {
-            const cards = document.querySelectorAll('.account-card');
-            let totalBalance = 0;
-            let totalUsed = 0;
-            let successCount = 0;
-
-            cards.forEach(card => {
+            let totalBalance = 0, totalUsed = 0, successCount = 0;
+            document.querySelectorAll('.account-card').forEach(card => {
                 if (card.dataset.balance) {
                     totalBalance += parseFloat(card.dataset.balance);
                     totalUsed += parseFloat(card.dataset.used);
                     successCount++;
                 }
             });
-
             document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
             document.getElementById('totalUsed').textContent = totalUsed.toFixed(2);
             document.getElementById('avgBalance').textContent = successCount > 0
-                ? (totalBalance / successCount).toFixed(2)
-                : '0.00';
+                ? (totalBalance / successCount).toFixed(2) : '0.00';
         }
 
-        // 更新状态文本
         function updateStatus(text, loading = false) {
             const status = document.getElementById('statusText');
             status.textContent = text;
             status.className = 'status' + (loading ? ' loading' : '');
         }
 
-        // 更新最后更新时间
         function updateLastUpdate() {
             const now = new Date();
-            const timeStr = now.toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
+            document.getElementById('lastUpdate').textContent = now.toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
             });
-            document.getElementById('lastUpdate').textContent = timeStr;
         }
     </script>
 </body>
