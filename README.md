@@ -1,6 +1,6 @@
 # API Account Monitor
 
-A system for monitoring API keys, quotas, and usage across multiple platforms
+A dashboard for monitoring API account balances and quotas across multiple New API compatible platforms.
 
 [English](README.md) | **中文** | [Changelog](CHANGELOG.md)
 
@@ -8,63 +8,52 @@ A system for monitoring API keys, quotas, and usage across multiple platforms
 
 ## Features
 
-### Core Features
-- **Multi-platform Support** - Monitor API accounts across different providers
-- **Quota Tracking** - Real-time tracking of API usage and quota limits
-- **Alert System** - Get notified when approaching quota limits or detecting anomalies
-- **Usage Analytics** - Visualize API usage patterns and trends
-
----
-
-## System Requirements
-
-| Platform | Minimum Version |
-|----------|-----------------|
-| Windows | Windows 10+ |
-| macOS | macOS 10.15+ |
-| Linux | Ubuntu 20.04+ |
-
----
-
-## Installation
-
-### Download from Releases
-
-Download the latest version from [Releases](https://github.com/Tonyhzk/api-account-monitor/releases) page.
+- **Multi-site Monitoring** - Track accounts across different API providers in one dashboard
+- **Compact Card View** - Each account shows site name, login username, remaining balance, and a proportional progress bar
+- **Smart Progress Bar** - Bars scale relative to the highest balance (or $100 if all below $100)
+- **Single Card Refresh** - Refresh individual accounts without reloading all
+- **Auto Refresh** - Configurable refresh interval from config file
+- **Responsive Layout** - Works on phone, half-screen, and full-width displays
+- **Dark Theme** - Black-based SOMEWHILE design language
 
 ---
 
 ## Quick Start
 
-1. Configure your API accounts in the configuration file
-2. Run the monitor application
-3. View real-time monitoring data on the dashboard
+1. Edit `src/api-account-monitor/config.json` with your sites and accounts
+2. Start a PHP server in `src/api-account-monitor/`
+3. Open the dashboard in a browser
+
+```bash
+cd src/api-account-monitor
+php -S localhost:8080
+```
 
 ---
 
 ## Configuration
 
-Configure your API accounts and monitoring settings in the configuration file.
+See `config.json` in the source directory:
 
----
-
-## Development Guide
-
-### Prerequisites
-
-- Python 3.8+
-- Node.js 18+ (for dashboard)
-
-### Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### Development Commands
-
-```bash
-python main.py
+```json
+{
+  "refreshInterval": 300,
+  "sites": [
+    {
+      "name": "Site Name",
+      "baseUrl": "https://api.example.com",
+      "headerKey": "New-Api-User",
+      "accounts": [
+        {
+          "name": "Display Name",
+          "account": "login_username",
+          "userId": "12345",
+          "accessToken": "your_token"
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ---
@@ -73,21 +62,16 @@ python main.py
 
 ```
 api-account-monitor/
-├── src/              # Source code
-├── config/           # Configuration files
-├── logs/             # Log files
-└── README.md
+├── src/api-account-monitor/
+│   ├── index.html      # Dashboard page
+│   ├── style.css       # Styles (SOMEWHILE design)
+│   ├── api.php         # Backend API proxy
+│   └── config.json     # Account configuration
+├── 0_Doc/              # Documentation
+├── CHANGELOG.md
+├── README.md
+└── VERSION
 ```
-
----
-
-## Contributing
-
-Welcome to submit Pull Requests! Before submitting, please ensure:
-
-1. Code passes tests
-2. Code is properly formatted
-3. Commit messages are clear
 
 ---
 
@@ -103,11 +87,3 @@ Welcome to submit Pull Requests! Before submitting, please ensure:
 
 - GitHub: [@Tonyhzk](https://github.com/Tonyhzk)
 - Project: [api-account-monitor](https://github.com/Tonyhzk/api-account-monitor)
-
----
-
-<div align="center">
-
-If this project helps you, please give it a ⭐ Star!
-
-</div>
