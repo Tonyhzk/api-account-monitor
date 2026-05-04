@@ -1,0 +1,40 @@
+{
+  "refreshInterval": 300,
+  "alert": {
+    "threshold": 100,
+    "email": "your-email@example.com",
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 465,
+    "smtp_user": "your-smtp-user@example.com",
+    "smtp_password": "your-smtp-password"
+  },
+  "sites": [
+    {
+      "name": "示例站点",
+      "baseUrl": "https://api.example.com",
+      "headerKey": "New-Api-User",
+      "accounts": [
+        {
+          "name": "account1",
+          "account": "user1@example.com",
+          "userId": "123456",
+          "accessToken": "your-access-token"
+        }
+      ]
+    },
+    {
+      "name": "人民币站点",
+      "baseUrl": "https://api.example.cn",
+      "headerKey": "X-Api-User",
+      "rate": 7.2,
+      "accounts": [
+        {
+          "name": "account2",
+          "account": "user2@example.com",
+          "userId": "654321",
+          "accessToken": "your-access-token"
+        }
+      ]
+    }
+  ]
+}
