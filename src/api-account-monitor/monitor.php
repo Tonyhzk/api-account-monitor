@@ -73,14 +73,23 @@ foreach ($alerts as $a) {
 }
 $body .= "\n请及时充值。\n\n—— API 余额监控大屏";
 
-$sendResult = sendMail($alert, $subject, $body);
+$maxRetries = 3;
+for ($i = 1; $i <= $maxRetries; $i++) {
+    $sendResult = sendMail($alert, $subject, $body);
 
-if ($sendResult === true) {
-    echo "[" . date('Y-m-d H:i:s') . "] 告警邮件发送成功\n";
-} else {
-    echo "[" . date('Y-m-d H:i:s') . "] 告警邮件发送失败: {$sendResult}\n";
-    exit(1);
+    if ($sendResult === true) {
+        echo "[" . date('Y-m-d H:i:s') . "] 告警邮件发送成功\n";
+        exit(0);
+    }
+
+    echo "[" . date('Y-m-d H:i:s') . "] 告警邮件发送失败 (第{$i}次): {$sendResult}\n";
+    if ($i < $maxRetries) {
+        sleep(5);
+    }
 }
+
+echo "[" . date('Y-m-d H:i:s') . "] 告警邮件重试 {$maxRetries} 次均失败，本次跳过\n";
+exit(0);
 
 // ========== 查询余额（复用 api.php 逻辑） ==========
 
