@@ -149,30 +149,41 @@ function sendMail($alert, $subject, $body) {
     $user = $alert['smtp_user'];
     $pass = $alert['smtp_password'];
     $to = $alert['email'];
+    $isSmtps = ($port === 465);
 
     $errno = 0;
     $errstr = '';
-    $sock = @fsockopen($host, $port, $errno, $errstr, 10);
+
+    if ($isSmtps) {
+        // 465 端口：直接 TLS 连接（SMTPS）
+        $context = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+        $sock = @stream_socket_client("tls://{$host}:{$port}", $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
+    } else {
+        // 587 等端口：先明文再 STARTTLS
+        $sock = @fsockopen($host, $port, $errno, $errstr, 10);
+    }
+
     if (!$sock) {
         return "连接 SMTP 失败: {$errstr} ({$errno})";
     }
 
     if (!smtpRead($sock, '220')) return 'SMTP 未就绪';
 
-    // STARTTLS
     fwrite($sock, "EHLO monitor\r\n");
     if (!smtpRead($sock, '250')) return 'EHLO 失败';
 
-    fwrite($sock, "STARTTLS\r\n");
-    if (!smtpRead($sock, '220')) return 'STARTTLS 失败';
+    if (!$isSmtps) {
+        // STARTTLS 升级
+        fwrite($sock, "STARTTLS\r\n");
+        if (!smtpRead($sock, '220')) return 'STARTTLS 失败';
 
-    // 升级为加密连接
-    if (!stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-        return 'TLS 握手失败';
+        if (!stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+            return 'TLS 握手失败';
+        }
+
+        fwrite($sock, "EHLO monitor\r\n");
+        if (!smtpRead($sock, '250')) return 'EHLO(2) 失败';
     }
-
-    fwrite($sock, "EHLO monitor\r\n");
-    if (!smtpRead($sock, '250')) return 'EHLO(2) 失败';
 
     // AUTH LOGIN
     fwrite($sock, "AUTH LOGIN\r\n");
@@ -197,6 +208,7 @@ function sendMail($alert, $subject, $body) {
     $msg .= "To: {$to}\r\n";
     $msg .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
     $msg .= "Content-Type: text/plain; charset=UTF-8\r\n";
+    $msg .= "Date: " . date('r') . "\r\n";
     $msg .= "\r\n";
     $msg .= $body . "\r\n";
     $msg .= ".\r\n";
