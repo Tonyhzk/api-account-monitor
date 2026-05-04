@@ -83,6 +83,7 @@ build/
 # ==================== 操作系统 ====================
 .DS_Store?
 ._*
+**/.DS_Store
 
 # Spotlight
 .Spotlight-V100
@@ -120,4 +121,3 @@ logs/
 *.tmp
 *.temp
 .cache/
-.DS_Store
