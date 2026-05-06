@@ -35,6 +35,18 @@
           "accessToken": "your-access-token"
         }
       ]
+    },
+    {
+      "name": "OpenCode",
+      "type": "opencode",
+      "serverId": "your-server-id",
+      "accounts": [
+        {
+          "name": "account1",
+          "workspaceId": "wrk_xxxxxxxxxxxxxxxx",
+          "authCookie": "your-auth-cookie"
+        }
+      ]
     }
   ]
 }

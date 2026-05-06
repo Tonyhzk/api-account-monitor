@@ -75,7 +75,7 @@
                     accountsConfig = result.data;
                     if (accountsConfig.refreshInterval !== undefined) {
                         const select = document.getElementById('intervalSelect');
-                        const option = select.querySelector(`option[value="¥{accountsConfig.refreshInterval}"]`);
+                        const option = select.querySelector(`option[value="${accountsConfig.refreshInterval}"]`);
                         if (option) {
                             select.value = accountsConfig.refreshInterval;
                         } else {
@@ -84,8 +84,8 @@
                             const mins = Math.floor(accountsConfig.refreshInterval / 60);
                             const secs = accountsConfig.refreshInterval % 60;
                             customOption.textContent = mins > 0
-                                ? (secs > 0 ? `¥{mins}分¥{secs}秒` : `¥{mins}分钟`)
-                                : `¥{secs}秒`;
+                                ? (secs > 0 ? `${mins}分${secs}秒` : `${mins}分钟`)
+                                : `${secs}秒`;
                             customOption.selected = true;
                             select.insertBefore(customOption, select.firstChild);
                         }
@@ -111,17 +111,17 @@
                 site.accounts.forEach((account, ai) => {
                     const card = document.createElement('div');
                     card.className = 'account-card';
-                    card.id = `card-¥{si}-¥{ai}`;
+                    card.id = `card-${si}-${ai}`;
                     card.innerHTML = `
                         <div class="card-header">
                             <div class="header-left">
-                                <div class="site-name">¥{site.name}</div>
+                                <div class="site-name">${site.name}</div>
                                 <div class="account-info">
-                                    <span class="account-name">¥{account.name}</span>
-                                    ¥{account.account ? '<span class="account-login">' + account.account + '</span>' : ''}
+                                    <span class="account-name">${account.name}</span>
+                                    ${account.account ? '<span class="account-login">' + account.account + '</span>' : ''}
                                 </div>
                             </div>
-                            <button class="refresh-btn" onclick="refreshSingleCard(¥{si},¥{ai})" title="刷新此账号">↻</button>
+                            <button class="refresh-btn" onclick="refreshSingleCard(${si},${ai})" title="刷新此账号">↻</button>
                         </div>
                         <div class="card-body">
                             <div class="balance-display loading-pulse">加载中...</div>
@@ -162,7 +162,8 @@
             let maxBalance = 0;
             for (const key in accountsData) {
                 const d = accountsData[key];
-                if (d && d.success) {
+                // OpenCode 类型没有 remaining 字段，跳过
+                if (d && d.success && d.data.remaining !== undefined && d.data.type !== 'opencode') {
                     maxBalance = Math.max(maxBalance, d.data.remaining);
                 }
             }
@@ -175,35 +176,85 @@
             for (const key in accountsData) {
                 const d = accountsData[key];
                 const [si, ai] = key.split('-').map(Number);
-                const card = document.getElementById(`card-¥{si}-¥{ai}`);
+                const card = document.getElementById(`card-${si}-${ai}`);
                 if (!card) continue;
 
                 if (d.success) {
                     const data = d.data;
-                    const pct = (data.remaining / refMax) * 100;
-                    const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
 
-                    card.querySelector('.card-body').innerHTML = `
-                        <div class="balance-display">
-                            <span class="balance-amount">¥¥{data.remaining.toFixed(2)}</span>
-                        </div>
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill ¥{colorClass}" style="width: ¥{Math.min(pct, 100)}%"></div>
+                    if (data.type === 'opencode') {
+                        const usages = [
+                            { label: '滚动', info: data.rollingUsage },
+                            { label: '周', info: data.weeklyUsage },
+                            { label: '月', info: data.monthlyUsage }
+                        ].filter(u => u.info);
+
+                        let html = '<div class="opencode-usage">';
+                        usages.forEach(u => {
+                            const pct = u.info.usagePercent;
+                            const remaining = 100 - pct;
+                            const resetText = formatResetTime(u.info.resetInSec);
+                            const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
+                            const statusTag = u.info.status !== 'ok' ? `<span class="status-tag ${u.info.status}">${u.info.status}</span>` : '';
+                            html += `
+                                <div class="usage-row">
+                                    <div class="usage-label">${u.label}${statusTag}</div>
+                                    <div class="usage-bar-wrap">
+                                        <div class="progress-bar">
+                                            <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
+                                        </div>
+                                        <span class="progress-pct">${remaining}%</span>
+                                    </div>
+                                    ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        card.querySelector('.card-body').innerHTML = html;
+                        const minRemaining = usages.reduce((min, u) => {
+                            const r = 100 - u.info.usagePercent;
+                            return r < min ? r : min;
+                        }, 100);
+                        const avgUsed = usages.reduce((sum, u) => sum + u.info.usagePercent, 0) / usages.length;
+                        card.dataset.balance = minRemaining;
+                        card.dataset.used = avgUsed;
+                    } else {
+                        const pct = (data.remaining / refMax) * 100;
+                        const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
+                        const unitSymbol = data.unit === 'CNY' ? '¥' : '$';
+
+                        card.querySelector('.card-body').innerHTML = `
+                            <div class="balance-display">
+                                <span class="balance-amount">${unitSymbol}${data.remaining.toFixed(2)}</span>
                             </div>
-                            <span class="progress-pct">¥{pct.toFixed(1)}%</span>
-                        </div>
-                    `;
-                    card.dataset.balance = data.remaining;
-                    card.dataset.used = data.used;
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
+                                </div>
+                                <span class="progress-pct">${pct.toFixed(1)}%</span>
+                            </div>
+                        `;
+                        card.dataset.balance = data.remaining;
+                        card.dataset.used = data.used;
+                    }
                 } else {
                     card.querySelector('.card-body').innerHTML = `
-                        <div class="error-message">¥{d.message || '查询失败'}</div>
+                        <div class="error-message">${d.message || '查询失败'}</div>
                     `;
                     delete card.dataset.balance;
                     delete card.dataset.used;
                 }
             }
+        }
+
+        function formatResetTime(seconds) {
+            if (!seconds || seconds <= 0) return '';
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (days > 0) return `${days}天${hours}时`;
+            if (hours > 0) return `${hours}时${mins}分`;
+            return `${mins}分`;
         }
 
         async function refreshData() {
@@ -216,14 +267,14 @@
                 const promises = [];
                 accountsConfig.sites.forEach((site, si) => {
                     site.accounts.forEach((account, ai) => {
-                        const promise = fetch(`api.php?action=query_balance&site=¥{si}&account=¥{ai}`)
+                        const promise = fetch(`api.php?action=query_balance&site=${si}&account=${ai}`)
                             .then(r => r.json())
                             .then(result => {
-                                accountsData[`¥{si}-¥{ai}`] = result;
+                                accountsData[`${si}-${ai}`] = result;
                             })
                             .catch(error => {
-                                console.error(`查询失败 [¥{site.name}/¥{account.name}]:`, error);
-                                accountsData[`¥{si}-¥{ai}`] = { success: false, message: error.message };
+                                console.error(`查询失败 [${site.name}/${account.name}]:`, error);
+                                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
                             });
                         promises.push(promise);
                     });
@@ -244,18 +295,18 @@
         }
 
         async function refreshSingleCard(si, ai) {
-            const card = document.getElementById(`card-¥{si}-¥{ai}`);
+            const card = document.getElementById(`card-${si}-${ai}`);
             const btn = card ? card.querySelector('.refresh-btn') : null;
             if (btn && btn.classList.contains('spinning')) return;
             if (btn) btn.classList.add('spinning');
 
             try {
-                const response = await fetch(`api.php?action=query_balance&site=¥{si}&account=¥{ai}`);
+                const response = await fetch(`api.php?action=query_balance&site=${si}&account=${ai}`);
                 const result = await response.json();
-                accountsData[`¥{si}-¥{ai}`] = result;
+                accountsData[`${si}-${ai}`] = result;
             } catch (error) {
                 console.error('查询失败:', error);
-                accountsData[`¥{si}-¥{ai}`] = { success: false, message: error.message };
+                accountsData[`${si}-${ai}`] = { success: false, message: error.message };
             }
 
             renderAllCards();
@@ -266,17 +317,21 @@
 
         function updateStats() {
             let totalBalance = 0, totalUsed = 0, successCount = 0;
+            let hasBalance = false;
             document.querySelectorAll('.account-card').forEach(card => {
                 if (card.dataset.balance) {
                     totalBalance += parseFloat(card.dataset.balance);
                     totalUsed += parseFloat(card.dataset.used);
                     successCount++;
+                    hasBalance = true;
                 }
             });
-            document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
-            document.getElementById('totalUsed').textContent = totalUsed.toFixed(2);
-            document.getElementById('avgBalance').textContent = successCount > 0
-                ? (totalBalance / successCount).toFixed(2) : '0.00';
+            if (hasBalance) {
+                document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
+                document.getElementById('totalUsed').textContent = totalUsed.toFixed(2);
+                document.getElementById('avgBalance').textContent = successCount > 0
+                    ? (totalBalance / successCount).toFixed(2) : '0.00';
+            }
         }
 
         function updateStatus(text, loading = false) {
