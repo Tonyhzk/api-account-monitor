@@ -170,103 +170,108 @@
             return maxBalance >= 100 ? maxBalance : 100;
         }
 
-        function renderAllCards() {
+        function renderSingleCard(si, ai) {
+            const key = `${si}-${ai}`;
+            const d = accountsData[key];
+            const card = document.getElementById(`card-${si}-${ai}`);
+            if (!card || !d) return;
+
             const refMax = getReferenceMax();
 
-            for (const key in accountsData) {
-                const d = accountsData[key];
-                const [si, ai] = key.split('-').map(Number);
-                const card = document.getElementById(`card-${si}-${ai}`);
-                if (!card) continue;
+            if (d.success) {
+                const data = d.data;
 
-                if (d.success) {
-                    const data = d.data;
+                if (data.type === 'opencode') {
+                    const usages = [
+                        { label: '滚动', info: data.rollingUsage },
+                        { label: '周', info: data.weeklyUsage },
+                        { label: '月', info: data.monthlyUsage }
+                    ].filter(u => u.info);
 
-                    if (data.type === 'opencode') {
-                        const usages = [
-                            { label: '滚动', info: data.rollingUsage },
-                            { label: '周', info: data.weeklyUsage },
-                            { label: '月', info: data.monthlyUsage }
-                        ].filter(u => u.info);
-
-                        let html = '<div class="opencode-usage">';
-                        usages.forEach(u => {
-                            const pct = u.info.usagePercent;
-                            const remaining = 100 - pct;
-                            const resetText = formatResetTime(u.info.resetInSec);
-                            const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
-                            const statusTag = u.info.status !== 'ok' ? `<span class="status-tag ${u.info.status}">${u.info.status}</span>` : '';
-                            html += `
-                                <div class="usage-row">
-                                    <div class="usage-label">${u.label}${statusTag}</div>
-                                    <div class="usage-bar-wrap">
-                                        <div class="progress-bar">
-                                            <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
-                                        </div>
-                                        <span class="progress-pct">${remaining}%</span>
+                    let html = '<div class="opencode-usage">';
+                    usages.forEach(u => {
+                        const pct = u.info.usagePercent;
+                        const remaining = 100 - pct;
+                        const resetText = formatResetTime(u.info.resetInSec);
+                        const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
+                        const statusTag = u.info.status !== 'ok' ? `<span class="status-tag ${u.info.status}">${u.info.status}</span>` : '';
+                        html += `
+                            <div class="usage-row">
+                                <div class="usage-label">${u.label}${statusTag}</div>
+                                <div class="usage-bar-wrap">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
                                     </div>
-                                    ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
+                                    <span class="progress-pct">${remaining}%</span>
                                 </div>
-                            `;
-                        });
-                        html += '</div>';
-                        card.querySelector('.card-body').innerHTML = html;
-                        card.dataset.type = 'opencode';
-                    } else if (data.type === 'volcengine' || data.type === 'cucloud') {
-                        const usages = [
-                            { label: '会话', info: data.sessionUsage },
-                            { label: '周', info: data.weeklyUsage },
-                            { label: '月', info: data.monthlyUsage }
-                        ].filter(u => u.info);
-
-                        let html = '<div class="opencode-usage">';
-                        usages.forEach(u => {
-                            const pct = u.info.usagePercent;
-                            const remaining = (100 - pct).toFixed(1);
-                            const resetText = formatResetTime(u.info.resetInSec);
-                            const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
-                            html += `
-                                <div class="usage-row">
-                                    <div class="usage-label">${u.label}</div>
-                                    <div class="usage-bar-wrap">
-                                        <div class="progress-bar">
-                                            <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
-                                        </div>
-                                        <span class="progress-pct">${remaining}%</span>
-                                    </div>
-                                    ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
-                                </div>
-                            `;
-                        });
-                        html += '</div>';
-                        card.querySelector('.card-body').innerHTML = html;
-                        card.dataset.type = 'volcengine';
-                    } else {
-                        const pct = (data.remaining / refMax) * 100;
-                        const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
-                        const unitSymbol = data.unit === 'CNY' ? '¥' : '$';
-
-                        card.querySelector('.card-body').innerHTML = `
-                            <div class="balance-display">
-                                <span class="balance-amount">${unitSymbol}${data.remaining.toFixed(2)}</span>
-                            </div>
-                            <div class="progress-container">
-                                <div class="progress-bar">
-                                    <div class="progress-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
-                                </div>
-                                <span class="progress-pct">${pct.toFixed(1)}%</span>
+                                ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
                             </div>
                         `;
-                        card.dataset.balance = data.remaining;
-                        card.dataset.used = data.used;
-                    }
+                    });
+                    html += '</div>';
+                    card.querySelector('.card-body').innerHTML = html;
+                    card.dataset.type = 'opencode';
+                } else if (data.type === 'volcengine' || data.type === 'cucloud') {
+                    const usages = [
+                        { label: '会话', info: data.sessionUsage },
+                        { label: '周', info: data.weeklyUsage },
+                        { label: '月', info: data.monthlyUsage }
+                    ].filter(u => u.info);
+
+                    let html = '<div class="opencode-usage">';
+                    usages.forEach(u => {
+                        const pct = u.info.usagePercent;
+                        const remaining = (100 - pct).toFixed(1);
+                        const resetText = formatResetTime(u.info.resetInSec);
+                        const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
+                        html += `
+                            <div class="usage-row">
+                                <div class="usage-label">${u.label}</div>
+                                <div class="usage-bar-wrap">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
+                                    </div>
+                                    <span class="progress-pct">${remaining}%</span>
+                                </div>
+                                ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    card.querySelector('.card-body').innerHTML = html;
+                    card.dataset.type = data.type;
                 } else {
+                    const pct = (data.remaining / refMax) * 100;
+                    const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
+                    const unitSymbol = data.unit === 'CNY' ? '¥' : '$';
+
                     card.querySelector('.card-body').innerHTML = `
-                        <div class="error-message">${d.message || '查询失败'}</div>
+                        <div class="balance-display">
+                            <span class="balance-amount">${unitSymbol}${data.remaining.toFixed(2)}</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill ${colorClass}" style="width: ${Math.min(pct, 100)}%"></div>
+                            </div>
+                            <span class="progress-pct">${pct.toFixed(1)}%</span>
+                        </div>
                     `;
-                    delete card.dataset.balance;
-                    delete card.dataset.used;
+                    card.dataset.balance = data.remaining;
+                    card.dataset.used = data.used;
                 }
+            } else {
+                card.querySelector('.card-body').innerHTML = `
+                    <div class="error-message">${d.message || '查询失败'}</div>
+                `;
+                delete card.dataset.balance;
+                delete card.dataset.used;
+            }
+        }
+
+        function renderAllCards() {
+            for (const key in accountsData) {
+                const [si, ai] = key.split('-').map(Number);
+                renderSingleCard(si, ai);
             }
         }
 
@@ -294,18 +299,20 @@
                             .then(r => r.json())
                             .then(result => {
                                 accountsData[`${si}-${ai}`] = result;
+                                // 每个请求完成立即渲染该卡片
+                                renderSingleCard(si, ai);
+                                updateStats();
                             })
                             .catch(error => {
                                 console.error(`查询失败 [${site.name}/${account.name}]:`, error);
                                 accountsData[`${si}-${ai}`] = { success: false, message: error.message };
+                                renderSingleCard(si, ai);
                             });
                         promises.push(promise);
                     });
                 });
 
                 await Promise.all(promises);
-                renderAllCards();
-                updateStats();
                 updateLastUpdate();
                 updateStatus('更新成功');
             } catch (error) {
@@ -332,7 +339,7 @@
                 accountsData[`${si}-${ai}`] = { success: false, message: error.message };
             }
 
-            renderAllCards();
+            renderSingleCard(si, ai);
             updateStats();
             updateLastUpdate();
             if (btn) btn.classList.remove('spinning');
