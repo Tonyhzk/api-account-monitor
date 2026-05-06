@@ -3,7 +3,7 @@
  * OpenCode 适配器 - 查询 OpenCode 用量
  */
 
-function queryOpencodeUsage($serverId, $workspaceId, $authCookie) {
+function queryOpencodeUsage($serverId, $workspaceId, $authCookie, $proxy = null) {
     $args = json_encode([
         't' => ['t' => 9, 'i' => 0, 'l' => 1, 'a' => [['t' => 1, 's' => $workspaceId]], 'o' => 0],
         'f' => 31,
@@ -26,7 +26,9 @@ function queryOpencodeUsage($serverId, $workspaceId, $authCookie) {
     curl_setopt($ch, CURLOPT_TIMEOUT, 15);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     curl_setopt($ch, CURLOPT_ENCODING, '');
-    curl_setopt($ch, CURLOPT_PROXY, 'http://127.0.0.1:7897');
+    if ($proxy) {
+        curl_setopt($ch, CURLOPT_PROXY, $proxy);
+    }
 
     $response = curl_exec($ch);
     $error = curl_error($ch);

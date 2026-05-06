@@ -96,11 +96,13 @@ switch ($action) {
  * 根据站点类型分发到对应适配器
  */
 function dispatchQuery($site, $account) {
+    global $config;
     $siteType = $site['type'] ?? 'newapi';
+    $proxy = $config['proxy'] ?? null;
 
     switch ($siteType) {
         case 'opencode':
-            return queryOpencodeUsage($site['serverId'], $account['workspaceId'], $account['authCookie']);
+            return queryOpencodeUsage($site['serverId'], $account['workspaceId'], $account['authCookie'], $proxy);
 
         case 'volcengine':
             return queryVolcengineUsage($account['cookies'], $account['csrfToken'], $account['webId']);
