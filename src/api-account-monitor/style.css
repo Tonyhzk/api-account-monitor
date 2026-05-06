@@ -406,7 +406,6 @@ body {
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 4px;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
   vertical-align: middle;
 }
@@ -414,12 +413,21 @@ body {
 .status-tag.ok {
   color: var(--green);
   background: rgba(48, 209, 88, 0.08);
+  border: 1px solid rgba(48, 209, 88, 0.15);
 }
 
 .status-tag.rate_limited,
-.status-tag.error {
+.status-tag.error,
+.status-tag.limited {
   color: var(--red);
   background: rgba(255, 69, 58, 0.08);
+  border: 1px solid rgba(255, 69, 58, 0.15);
+}
+
+.status-tag.warning {
+  color: var(--orange);
+  background: rgba(255, 159, 10, 0.08);
+  border: 1px solid rgba(255, 159, 10, 0.15);
 }
 
 /* ============================================
@@ -474,63 +482,6 @@ body {
   font-family: var(--mono);
   font-size: 11px;
   color: var(--red);
-}
-
-/* ============================================
-   12. OpenCode Usage 用量显示
-   ============================================ */
-.opencode-usage {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.usage-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.usage-label {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--label3);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.status-tag {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-.status-tag.ok {
-  background: rgba(48,209,88, 0.12);
-  color: var(--green);
-}
-
-.status-tag.error,
-.status-tag.rate_limited,
-.status-tag.limited {
-  background: rgba(255,69,58, 0.12);
-  color: var(--red);
-}
-
-.usage-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.usage-reset {
-  font-family: var(--mono);
-  font-size: 9px;
-  color: var(--label4);
-  letter-spacing: 0.02em;
 }
 
 /* ============================================
