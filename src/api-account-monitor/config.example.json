@@ -11,6 +11,7 @@
   "sites": [
     {
       "name": "示例站点",
+      "type": "newapi",
       "baseUrl": "https://api.example.com",
       "headerKey": "New-Api-User",
       "accounts": [
@@ -24,6 +25,7 @@
     },
     {
       "name": "人民币站点",
+      "type": "newapi",
       "baseUrl": "https://api.example.cn",
       "headerKey": "X-Api-User",
       "rate": 7.2,
@@ -45,6 +47,31 @@
           "name": "account1",
           "workspaceId": "wrk_xxxxxxxxxxxxxxxx",
           "authCookie": "your-auth-cookie"
+        }
+      ]
+    },
+    {
+      "name": "火山方舟",
+      "type": "volcengine",
+      "accounts": [
+        {
+          "name": "手机号或用户名",
+          "cookies": "从浏览器控制台复制的完整 Cookie 字符串",
+          "csrfToken": "从浏览器请求头中获取的 CSRF Token",
+          "webId": "从浏览器请求头中获取的 Web ID"
+        }
+      ]
+    },
+    {
+      "name": "联通云",
+      "type": "cucloud",
+      "accounts": [
+        {
+          "name": "账号ID",
+          "token": "从浏览器请求头中获取的 Bearer Token",
+          "accountId": "联通云账号ID",
+          "tenantId": "联通云租户ID",
+          "signature": "从浏览器请求 URL 中获取的签名参数"
         }
       ]
     }
