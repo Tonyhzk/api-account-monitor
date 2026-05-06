@@ -211,13 +211,7 @@
                         });
                         html += '</div>';
                         card.querySelector('.card-body').innerHTML = html;
-                        const minRemaining = usages.reduce((min, u) => {
-                            const r = 100 - u.info.usagePercent;
-                            return r < min ? r : min;
-                        }, 100);
-                        const avgUsed = usages.reduce((sum, u) => sum + u.info.usagePercent, 0) / usages.length;
-                        card.dataset.balance = minRemaining;
-                        card.dataset.used = avgUsed;
+                        card.dataset.type = 'opencode';
                     } else {
                         const pct = (data.remaining / refMax) * 100;
                         const colorClass = data.remaining > refMax * 0.5 ? '' : data.remaining > refMax * 0.2 ? 'warning' : 'danger';
@@ -317,21 +311,18 @@
 
         function updateStats() {
             let totalBalance = 0, totalUsed = 0, successCount = 0;
-            let hasBalance = false;
             document.querySelectorAll('.account-card').forEach(card => {
-                if (card.dataset.balance) {
+                // OpenCode 类型是百分比，不参与余额统计
+                if (card.dataset.balance && card.dataset.type !== 'opencode') {
                     totalBalance += parseFloat(card.dataset.balance);
                     totalUsed += parseFloat(card.dataset.used);
                     successCount++;
-                    hasBalance = true;
                 }
             });
-            if (hasBalance) {
-                document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
-                document.getElementById('totalUsed').textContent = totalUsed.toFixed(2);
-                document.getElementById('avgBalance').textContent = successCount > 0
-                    ? (totalBalance / successCount).toFixed(2) : '0.00';
-            }
+            document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
+            document.getElementById('totalUsed').textContent = totalUsed.toFixed(2);
+            document.getElementById('avgBalance').textContent = successCount > 0
+                ? (totalBalance / successCount).toFixed(2) : '0.00';
         }
 
         function updateStatus(text, loading = false) {

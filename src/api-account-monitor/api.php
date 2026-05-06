@@ -171,8 +171,9 @@ function queryOpencodeUsage($serverId, $workspaceId, $authCookie) {
 
     // 用更可靠的方式提取嵌套结构
     $extractUsage = function($jsData, $type) {
-        // 匹配 rollingUsage:{$R[N]={...}} 或 rollingUsage:{status:"ok",...}
-        $pattern = '/' . $type . ':\s*\{([^}]+)\}/';
+        // 匹配 rollingUsage:$R[1]={...} 或 rollingUsage:{status:"ok",...}
+        // 实际响应格式为 rollingUsage:$R[N]={...}，$R[N]= 是可选前缀
+        $pattern = '/' . $type . ':\s*(?:\$R\[\d+\]=)?\{([^}]+)\}/';
         if (!preg_match($pattern, $jsData, $matches)) {
             return null;
         }
