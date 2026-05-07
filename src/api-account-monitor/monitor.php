@@ -2,8 +2,17 @@
 /**
  * 余额监控告警脚本
  * CLI 运行：php monitor.php
- * 检测所有账号余额，低于阈值时发送邮件告警
+ * 检测所有开启 monitor 的账号，低于阈值时发送邮件告警
+ *
+ * config.json 每个账号可设置 "monitor": true/false 控制是否参与告警
+ * 未设置 monitor 字段时默认 true（主页仍显示余额，只是不触发告警邮件）
  */
+
+// 加载所有适配器（复用 api.php 的查询逻辑）
+$adaptersDir = __DIR__ . '/adapters/';
+foreach (glob($adaptersDir . '*.php') as $adapterFile) {
+    require_once $adapterFile;
+}
 
 $configFile = __DIR__ . '/config.json';
 if (!file_exists($configFile)) {
@@ -26,80 +35,59 @@ if (!$alert || empty($alert['threshold'])) {
 $threshold = floatval($alert['threshold']);
 $alerts = [];
 
-foreach ($config['sites'] as $site) {
+foreach ($config['sites'] as $siteIndex => $site) {
     $siteType = $site['type'] ?? 'newapi';
     $siteName = $site['name'];
 
-    if ($siteType === 'opencode') {
-        // OpenCode 用量类型：百分比计量，不走余额告警逻辑
-        foreach ($site['accounts'] as $account) {
-            $result = queryOpencodeUsage($site['serverId'], $account['workspaceId'], $account['authCookie']);
-            if (!$result['success']) {
-                echo "[{$siteName}/{$account['name']}] 查询失败: " . ($result['message'] ?? '未知错误') . "\n";
-                continue;
-            }
-            $rolling = $result['data']['rollingUsage']['usagePercent'] ?? '?';
-            $weekly = $result['data']['weeklyUsage']['usagePercent'] ?? '?';
-            $monthly = $result['data']['monthlyUsage']['usagePercent'] ?? '?';
-            echo "[{$siteName}/{$account['name']}] 用量: 滚动{$rolling}% / 周{$weekly}% / 月{$monthly}%\n";
+    foreach ($site['accounts'] as $accountIndex => $account) {
+        $accountName = $account['name'];
+        $shouldMonitor = $account['monitor'] ?? ($site['monitor'] ?? false);
 
-            // 月用量超过 90% 时告警
-            if (is_numeric($monthly) && $monthly >= 90) {
-                $alerts[] = [
-                    'site' => $siteName,
-                    'name' => $account['name'],
-                    'remaining' => 100 - $monthly,
-                    'unit' => '%'
-                ];
-            }
-        }
-        continue;
-    }
-
-    $rate = floatval($site['rate'] ?? 1);
-
-    foreach ($site['accounts'] as $account) {
-        $result = queryBalance($site['baseUrl'], $account['userId'], $account['accessToken'], $site['headerKey']);
-
-        if (!$result['success']) {
-            echo "[{$siteName}/{$account['name']}] 查询失败: " . ($result['message'] ?? '未知错误') . "\n";
+        // 未显式开启 monitor 的账号，直接跳过
+        if (!$shouldMonitor) {
             continue;
         }
 
-        $remaining = $result['data']['remaining'];
-        if ($rate != 1) {
-            $remaining *= $rate;
+        $result = dispatchMonitorQuery($site, $account);
+
+        if (!$result['success']) {
+            echo "[{$siteName}/{$accountName}] 查询失败: " . ($result['message'] ?? '未知错误') . "\n";
+            continue;
         }
 
-        $unit = ($rate != 1) ? '¥' : '$';
-        echo "[{$siteName}/{$account['name']}] 余额: {$unit}" . number_format($remaining, 2) . "\n";
+        // 根据类型格式化日志输出
+        $logLine = formatLogLine($siteType, $siteName, $accountName, $result, $site);
+        echo $logLine . "\n";
 
-        if ($remaining < $threshold) {
-            $alerts[] = [
-                'site' => $siteName,
-                'name' => $account['name'],
-                'remaining' => $remaining,
-                'unit' => $unit
-            ];
+        // 按类型判断是否需要告警
+        $alertInfo = checkAlert($siteType, $result, $site, $threshold);
+        if ($alertInfo) {
+            $alertInfo['site'] = $siteName;
+            $alertInfo['name'] = $accountName;
+            $alerts[] = $alertInfo;
         }
     }
 }
 
 if (empty($alerts)) {
-    echo "[" . date('Y-m-d H:i:s') . "] 所有账号余额正常，无需告警\n";
+    echo "[" . date('Y-m-d H:i:s') . "] 所有账号状态正常，无需告警\n";
     exit(0);
 }
 
 // 发送告警邮件
-echo "[" . date('Y-m-d H:i:s') . "] 发现 " . count($alerts) . " 个账号低于阈值 ¥{$threshold}，发送告警邮件...\n";
+echo "[" . date('Y-m-d H:i:s') . "] 发现 " . count($alerts) . " 个账号低于阈值，发送告警邮件...\n";
 
 $subject = "【余额预警】" . count($alerts) . " 个账号余额不足";
 
-$body = "以下账号余额低于预警阈值 ¥{$threshold}：\n\n";
+$body = "以下账号余额低于预警阈值：\n\n";
 foreach ($alerts as $a) {
-    $body .= "- {$a['site']} / {$a['name']}：{$a['unit']}" . number_format($a['remaining'], 2) . "\n";
+    $body .= "- {$a['site']} / {$a['name']}：{$a['unit']}" . number_format($a['remaining'], 2);
+    if (!empty($a['extra'])) {
+        $body .= " ({$a['extra']})";
+    }
+    $body .= "\n";
 }
-$body .= "\n请及时充值。\n\n—— API 余额监控大屏";
+$body .= "\n请及时处理。\n\n—— API 余额监控大屏";
 
 $maxRetries = 3;
 for ($i = 1; $i <= $maxRetries; $i++) {
@@ -119,129 +107,164 @@ for ($i = 1; $i <= $maxRetries; $i++) {
 echo "[" . date('Y-m-d H:i:s') . "] 告警邮件重试 {$maxRetries} 次均失败，本次跳过\n";
 exit(0);
 
-// ========== 查询余额（复用 api.php 逻辑） ==========
+// ========== 查询分发（复用 adapters） ==========
 
-function queryOpencodeUsage($serverId, $workspaceId, $authCookie, $proxy = null) {
+function dispatchMonitorQuery($site, $account) {
     global $config;
-    if ($proxy === null) {
-        $proxy = $config['proxy'] ?? null;
+    $siteType = $site['type'] ?? 'newapi';
+    $proxy = $config['proxy'] ?? null;
+
+    switch ($siteType) {
+        case 'opencode':
+            return queryOpencodeUsage($site['serverId'], $account['workspaceId'], $account['authCookie'], $proxy);
+
+        case 'volcengine':
+            return queryVolcengineUsage($account['cookies'], $account['csrfToken'], $account['webId']);
+
+        case 'volcengine-afp':
+            return queryVolcengineAfpUsage($account['cookies'], $account['csrfToken'], $account['webId']);
+
+        case 'cucloud':
+            return queryCucloudUsage($account['token'], $account['accountId'], $account['tenantId'], $account['signature']);
+
+        case 'newapi':
+        default:
+            $rate = floatval($site['rate'] ?? 1);
+            return queryNewapiBalance($site['baseUrl'], $account['userId'], $account['accessToken'], $site['headerKey'], $rate);
     }
-    $args = json_encode([
-        't' => ['t' => 9, 'i' => 0, 'l' => 1, 'a' => [['t' => 1, 's' => $workspaceId]], 'o' => 0],
-        'f' => 31,
-        'm' => []
-    ]);
-    $url = 'https://opencode.ai/_server?id=' . urlencode($serverId) . '&args=' . urlencode($args);
-
-    $headers = [
-        'Accept: */*',
-        'Cookie: auth=' . $authCookie . '; oc_locale=zh',
-        'Referer: https://opencode.ai/workspace/' . urlencode($workspaceId) . '/usage',
-        'X-Server-Id: ' . $serverId,
-        'X-Server-Instance: server-fn:3'
-    ];
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_ENCODING, '');
-    if ($proxy) {
-        curl_setopt($ch, CURLOPT_PROXY, $proxy);
-    }
-
-    $response = curl_exec($ch);
-    $error = curl_error($ch);
-
-    if ($error) {
-        return ['success' => false, 'message' => '请求失败: ' . $error];
-    }
-
-    if (!preg_match('/\{.*mine:.*rollingUsage:.*\}/s', $response, $matches)) {
-        return ['success' => false, 'message' => '解析响应失败'];
-    }
-
-    $jsData = $matches[0];
-
-    $extractUsage = function($jsData, $type) {
-        $pattern = '/' . $type . ':\s*(?:\$R\[\d+\]=)?\{([^}]+)\}/';
-        if (!preg_match($pattern, $jsData, $matches)) return null;
-        $inner = $matches[1];
-        $status = $resetInSec = $usagePercent = null;
-        if (preg_match('/status:\s*["\x27](\w+)["\x27]/', $inner, $m)) $status = $m[1];
-        if (preg_match('/status:\s*(\w+)/', $inner, $m) && !$status) $status = $m[1];
-        if (preg_match('/resetInSec:\s*(\d+)/', $inner, $m)) $resetInSec = intval($m[1]);
-        if (preg_match('/usagePercent:\s*(\d+)/', $inner, $m)) $usagePercent = intval($m[1]);
-        return ['status' => $status, 'resetInSec' => $resetInSec, 'usagePercent' => $usagePercent];
-    };
-
-    $rolling = $extractUsage($jsData, 'rollingUsage');
-    $weekly = $extractUsage($jsData, 'weeklyUsage');
-    $monthly = $extractUsage($jsData, 'monthlyUsage');
-
-    if (!$rolling && !$weekly && !$monthly) {
-        return ['success' => false, 'message' => '无法解析用量数据'];
-    }
-
-    return [
-        'success' => true,
-        'data' => [
-            'type' => 'opencode',
-            'rollingUsage' => $rolling,
-            'weeklyUsage' => $weekly,
-            'monthlyUsage' => $monthly
-        ]
-    ];
 }
 
-function queryBalance($baseUrl, $userId, $accessToken, $headerKey) {
-    $url = $baseUrl . '/api/user/self';
+// ========== 日志格式化 ==========
 
-    $headers = [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $accessToken,
-        $headerKey . ': ' . $userId
-    ];
+function formatLogLine($siteType, $siteName, $accountName, $result, $site) {
+    $data = $result['data'];
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_ENCODING, '');
+    switch ($siteType) {
+        case 'newapi':
+            $rate = floatval($site['rate'] ?? 1);
+            $unit = ($rate != 1) ? '¥' : '$';
+            $remaining = $data['remaining'];
+            return "[{$siteName}/{$accountName}] 余额: {$unit}" . number_format($remaining, 2);
 
-    $response = curl_exec($ch);
-    $error = curl_error($ch);
+        case 'opencode':
+            $rolling = $data['rollingUsage']['usagePercent'] ?? '?';
+            $weekly = $data['weeklyUsage']['usagePercent'] ?? '?';
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? '?';
+            return "[{$siteName}/{$accountName}] 用量: 滚动{$rolling}% / 周{$weekly}% / 月{$monthly}%";
 
-    if ($error) {
-        return ['success' => false, 'message' => '请求失败: ' . $error];
+        case 'volcengine':
+            $session = $data['sessionUsage']['usagePercent'] ?? '?';
+            $weekly = $data['weeklyUsage']['usagePercent'] ?? '?';
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? '?';
+            return "[{$siteName}/{$accountName}] 用量: 会话{$session}% / 周{$weekly}% / 月{$monthly}%";
+
+        case 'volcengine-afp':
+            $daily = $data['dailyUsage']['usagePercent'] ?? '?';
+            $fiveHour = $data['fiveHourUsage']['usagePercent'] ?? '?';
+            $weekly = $data['weeklyUsage']['usagePercent'] ?? '?';
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? '?';
+            return "[{$siteName}/{$accountName}] 用量: 日{$daily}% / 5h{$fiveHour}% / 周{$weekly}% / 月{$monthly}%";
+
+        case 'cucloud':
+            // 多套餐时列出每个
+            if (isset($data['packages'])) {
+                $lines = "[{$siteName}/{$accountName}] 多套餐:";
+                foreach ($data['packages'] as $pkg) {
+                    $monthPct = $pkg['perMonth']['usagePercent'] ?? '?';
+                    $lines .= " [{$pkg['packageName']} 月{$monthPct}%]";
+                }
+                return $lines;
+            }
+            $session = $data['sessionUsage']['usagePercent'] ?? '?';
+            $weekly = $data['weeklyUsage']['usagePercent'] ?? '?';
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? '?';
+            return "[{$siteName}/{$accountName}] 用量: 5h{$session}% / 周{$weekly}% / 月{$monthly}%";
+
+        default:
+            return "[{$siteName}/{$accountName}] 查询完成";
     }
+}
 
-    $decoded = @gzdecode($response);
-    if ($decoded !== false) {
-        $response = $decoded;
+// ========== 告警判断 ==========
+
+function checkAlert($siteType, $result, $site, $threshold) {
+    $data = $result['data'];
+
+    switch ($siteType) {
+        case 'newapi':
+            $rate = floatval($site['rate'] ?? 1);
+            $unit = ($rate != 1) ? '¥' : '$';
+            $remaining = $data['remaining'];
+            if ($remaining < $threshold) {
+                return [
+                    'remaining' => $remaining,
+                    'unit' => $unit,
+                    'extra' => "阈值 {$unit}{$threshold}"
+                ];
+            }
+            return null;
+
+        case 'opencode':
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? 0;
+            if (is_numeric($monthly) && $monthly >= 90) {
+                return [
+                    'remaining' => 100 - $monthly,
+                    'unit' => '%',
+                    'extra' => "月用量{$monthly}%"
+                ];
+            }
+            return null;
+
+        case 'volcengine':
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? 0;
+            if (is_numeric($monthly) && $monthly >= 90) {
+                return [
+                    'remaining' => 100 - $monthly,
+                    'unit' => '%',
+                    'extra' => "月用量{$monthly}%"
+                ];
+            }
+            return null;
+
+        case 'volcengine-afp':
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? 0;
+            if (is_numeric($monthly) && $monthly >= 90) {
+                return [
+                    'remaining' => 100 - $monthly,
+                    'unit' => '%',
+                    'extra' => "月用量{$monthly}%"
+                ];
+            }
+            return null;
+
+        case 'cucloud':
+            // 多套餐时检查每个套餐的月用量
+            if (isset($data['packages'])) {
+                foreach ($data['packages'] as $pkg) {
+                    $monthly = $pkg['perMonth']['usagePercent'] ?? 0;
+                    if (is_numeric($monthly) && $monthly >= 90) {
+                        return [
+                            'remaining' => 100 - $monthly,
+                            'unit' => '%',
+                            'extra' => "{$pkg['packageName']} 月用量{$monthly}%"
+                        ];
+                    }
+                }
+                return null;
+            }
+            $monthly = $data['monthlyUsage']['usagePercent'] ?? 0;
+            if (is_numeric($monthly) && $monthly >= 90) {
+                return [
+                    'remaining' => 100 - $monthly,
+                    'unit' => '%',
+                    'extra' => "月用量{$monthly}%"
+                ];
+            }
+            return null;
+
+        default:
+            return null;
     }
-
-    $data = json_decode($response, true);
-
-    if ($data && isset($data['success']) && $data['success']) {
-        $quota = $data['data']['quota'] ?? 0;
-        $used = $data['data']['used_quota'] ?? 0;
-
-        return [
-            'success' => true,
-            'data' => [
-                'remaining' => $quota / 500000,
-                'used' => $used / 500000,
-                'total' => ($quota + $used) / 500000
-            ]
-        ];
-    }
-
-    return ['success' => false, 'message' => $data['message'] ?? '查询失败'];
 }
 
 // ========== SMTP 发邮件（纯 socket，无需扩展） ==========
@@ -258,11 +281,9 @@ function sendMail($alert, $subject, $body) {
     $errstr = '';
 
     if ($isSmtps) {
-        // 465 端口：直接 TLS 连接（SMTPS）
         $context = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
         $sock = @stream_socket_client("tls://{$host}:{$port}", $errno, $errstr, 10, STREAM_CLIENT_CONNECT, $context);
     } else {
-        // 587 等端口：先明文再 STARTTLS
         $sock = @fsockopen($host, $port, $errno, $errstr, 10);
     }
 
@@ -276,7 +297,6 @@ function sendMail($alert, $subject, $body) {
     if (!smtpRead($sock, '250')) return 'EHLO 失败';
 
     if (!$isSmtps) {
-        // STARTTLS 升级
         fwrite($sock, "STARTTLS\r\n");
         if (!smtpRead($sock, '220')) return 'STARTTLS 失败';
 
@@ -288,7 +308,6 @@ function sendMail($alert, $subject, $body) {
         if (!smtpRead($sock, '250')) return 'EHLO(2) 失败';
     }
 
-    // AUTH LOGIN
     fwrite($sock, "AUTH LOGIN\r\n");
     if (!smtpRead($sock, '334')) return 'AUTH 请求失败';
 
