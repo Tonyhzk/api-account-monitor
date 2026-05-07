@@ -107,6 +107,9 @@ function dispatchQuery($site, $account) {
         case 'volcengine':
             return queryVolcengineUsage($account['cookies'], $account['csrfToken'], $account['webId']);
 
+        case 'volcengine-afp':
+            return queryVolcengineAfpUsage($account['cookies'], $account['csrfToken'], $account['webId']);
+
         case 'cucloud':
             return queryCucloudUsage($account['token'], $account['accountId'], $account['tenantId'], $account['signature']);
 

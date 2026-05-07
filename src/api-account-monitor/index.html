@@ -163,7 +163,7 @@
             for (const key in accountsData) {
                 const d = accountsData[key];
                 // OpenCode 类型没有 remaining 字段，跳过
-                if (d && d.success && d.data.remaining !== undefined && d.data.type !== 'opencode' && d.data.type !== 'volcengine' && d.data.type !== 'cucloud') {
+                if (d && d.success && d.data.remaining !== undefined && d.data.type !== 'opencode' && d.data.type !== 'volcengine' && d.data.type !== 'volcengine-afp' && d.data.type !== 'cucloud') {
                     maxBalance = Math.max(maxBalance, d.data.remaining);
                 }
             }
@@ -211,6 +211,38 @@
                     html += '</div>';
                     card.querySelector('.card-body').innerHTML = html;
                     card.dataset.type = 'opencode';
+                } else if (data.type === 'volcengine-afp') {
+                    const planLabel = data.planType ? ` [${data.planType}]` : '';
+                    const usages = [
+                        { label: '日', info: data.dailyUsage },
+                        { label: '5小时', info: data.fiveHourUsage },
+                        { label: '周', info: data.weeklyUsage },
+                        { label: '月', info: data.monthlyUsage }
+                    ].filter(u => u.info);
+
+                    let html = '<div class="opencode-usage">';
+                    if (planLabel) html += `<div class="plan-type-tag">AFP${planLabel}</div>`;
+                    usages.forEach(u => {
+                        const pct = u.info.usagePercent;
+                        const remaining = (100 - pct).toFixed(1);
+                        const resetText = formatResetTime(u.info.resetInSec);
+                        const colorClass = pct >= 80 ? 'danger' : pct >= 50 ? 'warning' : '';
+                        html += `
+                            <div class="usage-row">
+                                <div class="usage-label">${u.label}</div>
+                                <div class="usage-bar-wrap">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill ${colorClass}" style="width: ${Math.min(remaining, 100)}%"></div>
+                                    </div>
+                                    <span class="progress-pct">${remaining}%</span>
+                                </div>
+                                ${resetText ? `<div class="usage-reset">${resetText}</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    card.querySelector('.card-body').innerHTML = html;
+                    card.dataset.type = 'volcengine-afp';
                 } else if (data.type === 'volcengine' || data.type === 'cucloud') {
                     const usages = [
                         { label: '会话', info: data.sessionUsage },
@@ -349,7 +381,7 @@
             let totalBalance = 0, totalUsed = 0, successCount = 0;
             document.querySelectorAll('.account-card').forEach(card => {
                 // OpenCode 类型是百分比，不参与余额统计
-                if (card.dataset.balance && card.dataset.type !== 'opencode' && card.dataset.type !== 'volcengine' && card.dataset.type !== 'cucloud') {
+                if (card.dataset.balance && card.dataset.type !== 'opencode' && card.dataset.type !== 'volcengine' && card.dataset.type !== 'volcengine-afp' && card.dataset.type !== 'cucloud') {
                     totalBalance += parseFloat(card.dataset.balance);
                     totalUsed += parseFloat(card.dataset.used);
                     successCount++;
