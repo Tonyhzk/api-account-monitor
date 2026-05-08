@@ -13,6 +13,8 @@ A dashboard for monitoring API account balances and quotas across multiple New A
 - **Smart Progress Bar** - Bars scale relative to the highest balance (or $100 if all below $100)
 - **Single Card Refresh** - Refresh individual accounts without reloading all
 - **Auto Refresh** - Configurable refresh interval from config file
+- **Multiple Account Types** - Supports New API compatible platforms, OpenCode, Volcengine Ark, China Unicom Cloud, and more
+- **Remote Config Updates** - Provides a token-protected endpoint for updating specific config fields remotely
 - **Responsive Layout** - Works on phone, half-screen, and full-width displays
 - **Dark Theme** - Black-based SOMEWHILE design language
 
@@ -38,6 +40,7 @@ See `config.json` in the source directory:
 ```json
 {
   "refreshInterval": 300,
+  "updateToken": "change-this-token",
   "sites": [
     {
       "name": "Site Name",
@@ -55,6 +58,58 @@ See `config.json` in the source directory:
   ]
 }
 ```
+
+`updateToken` protects the remote config update endpoint. Use a long random string and never commit your real config.
+
+Supported site types:
+
+- `newapi`: New API compatible platforms. Account fields: `name`, `account`, `userId`, `accessToken`.
+- `opencode`: OpenCode usage monitoring. Account fields: `name`, `workspaceId`, `authCookie`.
+- `volcengine` / `volcengine-afp`: Volcengine Ark usage monitoring. Account fields: `name`, `cookies`, `csrfToken`, `webId`.
+- `cucloud`: China Unicom Cloud usage monitoring. Account fields: `name`, `token`, `accountId`, `tenantId`, `signature`.
+
+### Remote Config Updates
+
+Endpoint:
+
+```text
+POST /api.php?action=update_config
+```
+
+Use one of these headers:
+
+```text
+X-Config-Token: <config.updateToken>
+Authorization: Bearer <config.updateToken>
+```
+
+Single-field update:
+
+```json
+{
+  "path": "sites.0.accounts.0.accessToken",
+  "value": "new-token"
+}
+```
+
+Batch update:
+
+```json
+{
+  "updates": [
+    {
+      "path": "sites.0.accounts.0.accessToken",
+      "value": "new-token"
+    },
+    {
+      "path": "refreshInterval",
+      "value": 300
+    }
+  ]
+}
+```
+
+Paths use dot notation matching `config.json`; array indexes are numeric. The endpoint only updates existing fields, and invalid paths are rejected without writing changes.
 
 ---
 

@@ -34,6 +34,7 @@ _pycache_/
 __pycache__/
 
 # 特殊文件
+CLAUDE.md
 *cache.db
 .cache
 temp
