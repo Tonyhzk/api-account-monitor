@@ -1,5 +1,6 @@
 {
   "refreshInterval": 300,
+  "updateToken": "change-this-update-token",
   "proxy": "http://127.0.0.1:7897",
   "alert": {
     "threshold": 100,
